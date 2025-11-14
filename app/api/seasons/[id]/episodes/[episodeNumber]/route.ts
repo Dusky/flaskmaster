@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { query } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
@@ -15,33 +15,13 @@ export async function GET(
       );
     }
 
-    // Fetch episode with all tasks and results
-    const episode = await prisma.episode.findFirst({
-      where: {
-        seasonId: params.id,
-        episodeNumber: episodeNumber,
-      },
-      include: {
-        tasks: {
-          include: {
-            results: {
-              include: {
-                contestant: {
-                  select: {
-                    id: true,
-                    name: true,
-                    colorIndex: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            taskNumber: "asc",
-          },
-        },
-      },
-    });
+    // Fetch episode
+    const episodes = await query<any>(`
+      SELECT * FROM episodes
+      WHERE season_id = $1 AND episode_number = $2
+    `, [params.id, episodeNumber]);
+
+    const episode = episodes[0];
 
     if (!episode) {
       return NextResponse.json(
@@ -50,35 +30,59 @@ export async function GET(
       );
     }
 
-    // Transform the data for the frontend
+    // Fetch tasks for this episode
+    const tasks = await query<any>(`
+      SELECT * FROM tasks
+      WHERE episode_id = $1
+      ORDER BY task_number
+    `, [episode.id]);
+
+    // For each task, fetch results with contestant info
+    for (const task of tasks) {
+      const results = await query<any>(`
+        SELECT
+          tr.*,
+          c.name as contestant_name,
+          c.color_index as contestant_color
+        FROM task_results tr
+        JOIN contestants c ON c.id = tr.contestant_id
+        WHERE tr.task_id = $1
+        ORDER BY tr.score DESC
+      `, [task.id]);
+
+      // Transform results
+      task.results = results.map((result: any) => ({
+        id: result.id,
+        contestantId: result.contestant_id,
+        contestantName: result.contestant_name,
+        contestantColor: result.contestant_color,
+        narrative: result.narrative,
+        completionTime: result.completion_time,
+        outcome: result.outcome,
+        score: result.score,
+        disqualified: result.disqualified,
+        ruleViolations: result.rule_violations,
+      }));
+
+      // Convert task to camelCase
+      task.taskNumber = task.task_number;
+      task.taskType = task.task_type;
+
+      delete task.episode_id;
+      delete task.task_number;
+      delete task.task_type;
+      delete task.created_at;
+    }
+
+    // Transform the episode data
     const transformedEpisode = {
       id: episode.id,
-      episodeNumber: episode.episodeNumber,
+      episodeNumber: episode.episode_number,
       title: episode.title,
       status: episode.status,
-      airDate: episode.airDate,
+      airDate: episode.air_date,
       content: episode.content,
-      tasks: episode.tasks.map((task) => ({
-        id: task.id,
-        taskNumber: task.taskNumber,
-        taskType: task.taskType,
-        description: task.description,
-        location: task.location,
-        rules: task.rules,
-        metadata: task.metadata,
-        results: task.results.map((result) => ({
-          id: result.id,
-          contestantId: result.contestantId,
-          contestantName: result.contestant.name,
-          contestantColor: result.contestant.colorIndex,
-          narrative: result.narrative,
-          completionTime: result.completionTime,
-          outcome: result.outcome,
-          score: result.score,
-          disqualified: result.disqualified,
-          ruleViolations: result.ruleViolations,
-        })),
-      })),
+      tasks: tasks,
     };
 
     return NextResponse.json(transformedEpisode);
