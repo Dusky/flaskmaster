@@ -3,10 +3,11 @@ import { query } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; episodeNumber: string } }
+  { params }: { params: Promise<{ id: string; episodeNumber: string }> }
 ) {
   try {
-    const episodeNumber = parseInt(params.episodeNumber);
+    const { id: seasonId, episodeNumber: episodeNumberStr } = await params;
+    const episodeNumber = parseInt(episodeNumberStr);
 
     if (isNaN(episodeNumber)) {
       return NextResponse.json(
@@ -19,7 +20,7 @@ export async function GET(
     const episodes = await query<any>(`
       SELECT * FROM episodes
       WHERE season_id = $1 AND episode_number = $2
-    `, [params.id, episodeNumber]);
+    `, [seasonId, episodeNumber]);
 
     const episode = episodes[0];
 
