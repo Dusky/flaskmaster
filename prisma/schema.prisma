@@ -1,0 +1,225 @@
+// Prisma schema for The Compound
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String   @map("password_hash")
+  currencyBalance Int    @default(1000) @map("currency_balance")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  picks         UserPick[]
+  bets          Bet[]
+
+  @@map("users")
+}
+
+// ============================================
+// SEASONS & CORE GAME ENTITIES
+// ============================================
+
+model Season {
+  id              String   @id @default(cuid())
+  seasonNumber    Int      @unique @map("season_number")
+  status          String   @default("upcoming") // upcoming, active, completed
+  startDate       DateTime @map("start_date")
+  endDate         DateTime? @map("end_date")
+
+  // Persistent characters
+  taskmasterName        String @map("taskmaster_name")
+  taskmasterPersonality String @map("taskmaster_personality") @db.Text
+  assistantName         String @map("assistant_name")
+  assistantPersonality  String @map("assistant_personality") @db.Text
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  contestants     Contestant[]
+  episodes        Episode[]
+  userPicks       UserPick[]
+
+  @@map("seasons")
+}
+
+model Contestant {
+  id                  String  @id @default(cuid())
+  seasonId            String  @map("season_id")
+  name                String
+  backstory           String  @db.Text
+  personalityArchetype String @map("personality_archetype")
+  colorIndex          Int     @map("color_index") // 1-5, maps to contestant colors
+
+  // Hidden stats (never shown to players initially)
+  hiddenStats         Json    @map("hidden_stats") // {creativity: 8, physical: 6, etc.}
+
+  // Tracked stats (visible, updated after each episode)
+  trackedStats        Json    @map("tracked_stats") @default("{}") // {totalPoints: 0, tasksWon: 0, etc.}
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  // Relations
+  season              Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  userPicks           UserPick[]
+  taskResults         TaskResult[]
+
+  @@map("contestants")
+}
+
+model Episode {
+  id              String   @id @default(cuid())
+  seasonId        String   @map("season_id")
+  episodeNumber   Int      @map("episode_number")
+  title           String?
+  status          String   @default("upcoming") // upcoming, live, completed
+  airDate         DateTime @map("air_date")
+
+  // Generated content stored as JSON
+  content         Json?    // {opening: "...", prizeTask: {...}, tasks: [...], liveTask: {...}, results: {...}}
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  season          Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  bets            Bet[]
+
+  @@unique([seasonId, episodeNumber])
+  @@map("episodes")
+}
+
+model Task {
+  id              String   @id @default(cuid())
+  episodeId       String   @map("episode_id")
+  taskNumber      Int      @map("task_number") // 0=prize, 1-3=regular, 4=live
+  taskType        String   @map("task_type") // prize, creative, physical, lateral, live
+
+  description     String   @db.Text
+  location        String?
+  rules           String?  @db.Text
+
+  // Task-specific data
+  metadata        Json?    // Additional task info
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  episode         Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  results         TaskResult[]
+  bets            Bet[]
+
+  @@unique([episodeId, taskNumber])
+  @@map("tasks")
+}
+
+model TaskResult {
+  id              String   @id @default(cuid())
+  taskId          String   @map("task_id")
+  contestantId    String   @map("contestant_id")
+
+  // Attempt details
+  narrative       String   @db.Text // AI-generated description of their attempt
+  completionTime  Int?     @map("completion_time") // in seconds
+  outcome         String?  @db.Text // What happened
+
+  // Scoring
+  score           Int      // 1-5 points (standard Taskmaster)
+  disqualified    Boolean  @default(false)
+  ruleViolations  Int      @default(0) @map("rule_violations")
+
+  // Additional data
+  metadata        Json?    // Any extra tracked info
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  task            Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  contestant      Contestant @relation(fields: [contestantId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, contestantId])
+  @@map("task_results")
+}
+
+// ============================================
+// USER PICKS & ROSTER
+// ============================================
+
+model UserPick {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  seasonId        String   @map("season_id")
+  contestantId    String   @map("contestant_id")
+
+  pickedAt        DateTime @default(now()) @map("picked_at")
+  currencySpent   Int      @default(0) @map("currency_spent") // For mid-season switches
+  active          Boolean  @default(true) // Current pick or switched out
+
+  // Relations
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season          Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  contestant      Contestant @relation(fields: [contestantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId, active]) // One active pick per user per season
+  @@map("user_picks")
+}
+
+// ============================================
+// BETTING SYSTEM
+// ============================================
+
+model Bet {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  episodeId       String   @map("episode_id")
+  taskId          String?  @map("task_id") // Null for episode-level bets
+
+  betType         String   @map("bet_type") // episode_winner, task_winner, exact_score, over_under, etc.
+  betTarget       String   @map("bet_target") // contestantId, point value, etc. (stored as string)
+
+  amount          Int      // Currency amount wagered
+  odds            Float    // e.g., 2.5 means 2.5x payout
+  potentialPayout Int      @map("potential_payout") // amount * odds
+
+  status          String   @default("pending") // pending, won, lost, void
+  actualPayout    Int      @default(0) @map("actual_payout")
+
+  placedAt        DateTime @default(now()) @map("placed_at")
+  resolvedAt      DateTime? @map("resolved_at")
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode         Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  task            Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("bets")
+}
+
+// ============================================
+// STATS DEFINITIONS (Dynamic)
+// ============================================
+
+model StatDefinition {
+  id              String   @id @default(cuid())
+  statName        String   @unique @map("stat_name")
+  description     String   @db.Text
+  category        String   // performance, behavior, chaos, personality
+  aiGenerated     Boolean  @default(false) @map("ai_generated")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("stat_definitions")
+}
