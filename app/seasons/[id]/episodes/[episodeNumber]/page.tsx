@@ -81,21 +81,35 @@ export default function EpisodePage() {
     try {
       // Fetch season info (includes contestants)
       const seasonRes = await fetch(`/api/seasons/${params.id}`);
+      if (!seasonRes.ok) {
+        throw new Error('Failed to fetch season');
+      }
       const seasonData = await seasonRes.json();
+      if (seasonData.error) {
+        throw new Error(seasonData.error);
+      }
       setSeason(seasonData);
 
       // Fetch episode with tasks and results
       const episodeRes = await fetch(
         `/api/seasons/${params.id}/episodes/${params.episodeNumber}`
       );
+      if (!episodeRes.ok) {
+        throw new Error('Failed to fetch episode');
+      }
       const episodeData = await episodeRes.json();
+      if (episodeData.error) {
+        throw new Error(episodeData.error);
+      }
       setEpisode(episodeData);
 
       // Fetch user currency if logged in
       if (user) {
         const currencyRes = await fetch(`/api/user/${user.id}/currency`);
-        const currencyData = await currencyRes.json();
-        setUserCurrency(currencyData.currency || 0);
+        if (currencyRes.ok) {
+          const currencyData = await currencyRes.json();
+          setUserCurrency(currencyData.currency || 0);
+        }
       }
 
       setLoading(false);
