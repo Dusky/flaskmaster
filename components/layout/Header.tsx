@@ -1,11 +1,30 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 export function Header() {
-  // Placeholder values - will connect to auth and currency later
-  const userCurrency = 450;
-  const isAuthenticated = false;
+  const { user, signOut } = useAuth();
+  const [userCurrency, setUserCurrency] = useState<number | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      // Fetch user currency from API
+      fetch(`/api/user/${user.id}/currency`)
+        .then((res) => res.json())
+        .then((data) => setUserCurrency(data.currency))
+        .catch(() => setUserCurrency(1000)); // Default if fetch fails
+    } else {
+      setUserCurrency(null);
+    }
+  }, [user]);
+
+  const handleSignOut = async () => {
+    setShowUserMenu(false);
+    await signOut();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-white/10">
@@ -48,20 +67,50 @@ export function Header() {
 
           {/* User section */}
           <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
+            {user ? (
               <>
                 {/* Currency display */}
                 <div className="flex items-center space-x-2 bg-surface px-4 py-2 rounded-lg border border-white/10">
                   <span className="text-gold text-lg">⚡</span>
                   <span className="font-mono text-gold font-bold">
-                    {userCurrency}
+                    {userCurrency !== null ? userCurrency : "..."}
                   </span>
                 </div>
 
                 {/* User menu */}
-                <button className="text-text-secondary hover:text-text-primary transition-colors">
-                  User ▼
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    {user.username || user.email.split("@")[0]} ▼
+                  </button>
+
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-lg shadow-card-hover overflow-hidden">
+                      <Link
+                        href="/profile"
+                        className="block px-4 py-3 text-text-primary hover:bg-background transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Profile
+                      </Link>
+                      <Link
+                        href="/my-bets"
+                        className="block px-4 py-3 text-text-primary hover:bg-background transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        My Bets
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-4 py-3 text-danger hover:bg-background transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <Link

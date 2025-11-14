@@ -25,13 +25,23 @@ The Compound is a unique fantasy sports game where players pick contestants comp
 
 ## 🚀 Getting Started
 
+### Quick Start
+
+**📋 For detailed setup instructions, see [SETUP.md](./SETUP.md)**
+
+The setup guide includes step-by-step instructions for:
+- Setting up Supabase (recommended - free & includes database + auth)
+- Configuring local PostgreSQL (alternative)
+- Database initialization and seeding
+- Troubleshooting common issues
+
 ### Prerequisites
 
 - Node.js 18+ and npm
-- PostgreSQL database (local or Supabase)
-- (Optional) Supabase account for auth
+- PostgreSQL database (Supabase recommended, or local PostgreSQL)
+- Supabase account for authentication (free tier available)
 
-### Installation
+### Quick Installation
 
 1. **Clone the repository**
    ```bash
@@ -143,11 +153,12 @@ See `prisma/schema.prisma` for the full schema.
 - [x] Core UI components (Card, Button, Layout)
 - [x] Home dashboard with placeholder content
 
-### Phase 2: Authentication & Database
-- [ ] Supabase authentication setup
-- [ ] User registration and login
-- [ ] Database migrations
-- [ ] User profile pages
+### Phase 2: Authentication & Database ✅
+- [x] Supabase authentication setup
+- [x] User registration and login
+- [x] Database migrations and seed data
+- [x] User profile pages
+- [x] API routes for user data
 
 ### Phase 3: Core Game Features
 - [ ] Season management
