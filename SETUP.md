@@ -1,151 +1,148 @@
 # The Compound - Setup Guide
 
-This guide will help you set up The Compound with a database and authentication.
+This guide will help you set up The Compound with a local PostgreSQL database and NextAuth.js authentication.
 
-## Option 1: Supabase (Recommended - Free & Easy)
+## Prerequisites
 
-Supabase provides both PostgreSQL database and authentication in one service.
-
-### Step 1: Create a Supabase Project
-
-1. Go to [https://supabase.com](https://supabase.com)
-2. Sign up or log in
-3. Click "New Project"
-4. Fill in:
-   - **Name**: the-compound
-   - **Database Password**: (create a strong password and save it)
-   - **Region**: Choose closest to you
-   - **Pricing Plan**: Free
-
-### Step 2: Get Your Credentials
-
-Once your project is created:
-
-1. Go to **Settings** → **API**
-2. Copy the following values:
-   - **Project URL** (looks like `https://xxxxx.supabase.co`)
-   - **anon/public key** (starts with `eyJ...`)
-
-3. Go to **Settings** → **Database**
-4. Scroll down to **Connection String** → **URI**
-5. Copy the connection string (it will have `[YOUR-PASSWORD]` placeholder)
-6. Replace `[YOUR-PASSWORD]` with the database password you created earlier
-
-### Step 3: Update Your .env File
-
-Edit `/home/user/flaskmaster/.env`:
-
-```env
-# Database - Use your Supabase connection string
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres"
-
-# Supabase Authentication
-NEXT_PUBLIC_SUPABASE_URL="https://xxxxx.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-# App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
-
-### Step 4: Initialize the Database
-
-Run these commands to set up your database:
-
-```bash
-# Generate Prisma client
-npm run db:generate
-
-# Push schema to database (creates tables)
-npm run db:push
-
-# Seed initial data (contestants, season)
-npm run db:seed
-```
-
-### Step 5: Configure Supabase Auth (Optional but Recommended)
-
-By default, Supabase sends confirmation emails. For development, you can disable this:
-
-1. Go to **Authentication** → **Settings** in Supabase dashboard
-2. Scroll to **Email Auth**
-3. **Disable** "Enable email confirmations" for easier testing
-
-### Step 6: Test It Out!
-
-```bash
-npm run dev
-```
-
-Visit http://localhost:3000 and:
-1. Click "Sign In"
-2. Click "Create one" to register
-3. Create an account
-4. You should be redirected to the homepage with your currency showing!
+- Node.js 18+ and npm
+- PostgreSQL (local installation)
+- Terminal/command line access
 
 ---
 
-## Option 2: Local PostgreSQL
+## Step 1: Install PostgreSQL
 
-If you prefer to run PostgreSQL locally:
-
-### Step 1: Install PostgreSQL
-
-**macOS (using Homebrew):**
+### On macOS (using Homebrew):
 ```bash
 brew install postgresql@15
 brew services start postgresql@15
 ```
 
-**Ubuntu/Debian:**
+### On Debian/Ubuntu:
 ```bash
 sudo apt update
 sudo apt install postgresql postgresql-contrib
 sudo systemctl start postgresql
+sudo systemctl enable postgresql
 ```
 
-**Windows:**
+### On Windows:
 Download from [https://www.postgresql.org/download/windows/](https://www.postgresql.org/download/windows/)
-
-### Step 2: Create Database
-
-```bash
-# Access PostgreSQL
-psql postgres
-
-# Create database
-CREATE DATABASE compound;
-
-# Create user (optional)
-CREATE USER compound_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE compound TO compound_user;
-
-# Exit
-\q
-```
-
-### Step 3: Update .env
-
-```env
-DATABASE_URL="postgresql://compound_user:your_password@localhost:5432/compound"
-
-# You still need Supabase for auth, OR implement a different auth solution
-NEXT_PUBLIC_SUPABASE_URL=""
-NEXT_PUBLIC_SUPABASE_ANON_KEY=""
-```
-
-### Step 4: Initialize Database
-
-```bash
-npm run db:generate
-npm run db:push
-npm run db:seed
-```
-
-**Note:** Without Supabase, authentication won't work. You'll need to implement an alternative auth solution (NextAuth.js, etc.).
 
 ---
 
-## Available Database Commands
+## Step 2: Create the Database
+
+```bash
+# Connect to PostgreSQL
+sudo -u postgres psql
+# Or on macOS/Windows just: psql postgres
+
+# Create database and user
+CREATE DATABASE compound;
+CREATE USER compound_user WITH PASSWORD 'your_secure_password';
+GRANT ALL PRIVILEGES ON DATABASE compound TO compound_user;
+
+# Exit PostgreSQL
+\q
+```
+
+---
+
+## Step 3: Set Up Environment Variables
+
+```bash
+# Copy the example env file
+cp .env.example .env
+
+# Generate a secret for NextAuth
+openssl rand -base64 32
+```
+
+Edit `.env` with your values:
+
+```env
+# Database - Use your PostgreSQL credentials
+DATABASE_URL="postgresql://compound_user:your_secure_password@localhost:5432/compound?schema=public"
+
+# NextAuth - Paste the generated secret
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="paste-your-generated-secret-here"
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+---
+
+## Step 4: Install Dependencies
+
+```bash
+npm install
+```
+
+---
+
+## Step 5: Initialize the Database
+
+```bash
+# Generate Prisma client
+npm run db:generate
+
+# Create tables in your database
+npm run db:push
+
+# Load test data (5 contestants, 1 season)
+npm run db:seed
+```
+
+You should see output like:
+```
+🌱 Starting database seed...
+✅ Created season: 1
+✅ Created contestant: Sarah Kim
+✅ Created contestant: David Park
+✅ Created contestant: Margaret Thompson
+✅ Created contestant: James Wilson
+✅ Created contestant: Elena Rodriguez
+✅ Created stat definitions
+🎉 Database seed completed successfully!
+```
+
+---
+
+## Step 6: Start the Development Server
+
+```bash
+npm run dev
+```
+
+Visit **http://localhost:3000**
+
+---
+
+## ✅ Verify Everything Works
+
+1. **Home page loads** - You should see "THE COMPOUND" welcome screen
+2. **Create an account**:
+   - Click "Create Account"
+   - Fill in username, email, password
+   - Should auto-login and redirect to dashboard
+3. **View contestants**:
+   - Click "View Contestants" or visit `/seasons`
+   - You should see 5 contestants from the seed data
+4. **Pick a contestant**:
+   - Click "Select" on any contestant
+   - Confirm your pick
+   - Should return to dashboard showing your pick
+5. **Check your profile**:
+   - Click your username in the header
+   - Click "Profile"
+   - Should show 1,000⚡ starting currency
+
+---
+
+## 🗄️ Available Database Commands
 
 ```bash
 # Generate Prisma Client (run after schema changes)
@@ -166,70 +163,130 @@ npm run db:studio
 
 ---
 
-## Verification Checklist
+## 🐛 Troubleshooting
 
-- [ ] Database tables created (check with `npm run db:studio`)
-- [ ] Seed data loaded (5 contestants should exist)
-- [ ] Can create an account
-- [ ] Can login
-- [ ] Currency shows in header after login
-- [ ] Profile page loads with your stats
+### Database Connection Errors
 
----
+**Error: "invalid port number in database URL"**
+- Check your `DATABASE_URL` format in `.env`
+- Should be: `postgresql://user:password@host:port/database`
 
-## Troubleshooting
+**Error: "Can't connect to database"**
+```bash
+# Check if PostgreSQL is running
+sudo systemctl status postgresql  # Linux
+brew services list  # macOS
 
-### "Failed to fetch font" errors
-These are warnings about Google Fonts not loading (likely network restrictions). The app uses fallback fonts and works fine.
+# Start PostgreSQL if needed
+sudo systemctl start postgresql  # Linux
+brew services start postgresql@15  # macOS
+```
 
-### "Prisma client not found"
-Run `npm run db:generate` to generate the Prisma client.
+**Error: "password authentication failed"**
+- Verify your password in the `DATABASE_URL`
+- Try connecting manually: `psql -U compound_user -d compound -h localhost`
+- If that fails, recreate the user in PostgreSQL
 
-### "Can't connect to database"
-- Check your `DATABASE_URL` is correct
-- Make sure PostgreSQL is running
-- Verify firewall/network settings
+### Permission Errors
 
-### "Supabase auth not working"
-- Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set
-- Check that email confirmations are disabled in Supabase dashboard for testing
-- Make sure the environment variables are prefixed with `NEXT_PUBLIC_`
+```bash
+# Grant all permissions to your user
+sudo -u postgres psql
+GRANT ALL PRIVILEGES ON DATABASE compound TO compound_user;
+GRANT ALL PRIVILEGES ON SCHEMA public TO compound_user;
+\q
+```
 
-### Database schema changes not showing
+### Prisma Errors
+
+**Error: "Prisma client not found"**
+```bash
+npm run db:generate
+```
+
+**Error: "Table already exists"**
 ```bash
 # Reset the database (⚠️ deletes all data)
 npm run db:push -- --force-reset
-
-# Re-seed
 npm run db:seed
+```
+
+### NextAuth Errors
+
+**Error: "[next-auth][error][SIGNIN_EMAIL_ERROR]"**
+- Make sure `NEXTAUTH_SECRET` is set in `.env`
+- Regenerate it: `openssl rand -base64 32`
+
+**Error: "NEXTAUTH_URL is not defined"**
+- Add to `.env`: `NEXTAUTH_URL="http://localhost:3000"`
+
+### App Errors
+
+**Error: "next: command not found"**
+```bash
+npm install
+```
+
+**Port 3000 already in use**
+```bash
+# Kill the process using port 3000
+lsof -ti:3000 | xargs kill -9
+# Or use a different port
+PORT=3001 npm run dev
 ```
 
 ---
 
-## Next Steps
+## 🚀 Production Deployment
 
-Once authentication and database are working:
+For production deployment:
 
-1. **Explore the seed data** - Open `npm run db:studio` to see the contestants
-2. **Check your profile** - Visit http://localhost:3000/profile
-3. **Read the specs** - Review `SPEC.md` and `DESIGN.md` for the full vision
-4. **Start building** - Next phases include episode viewing, contestant selection, and betting!
+1. **Set up production PostgreSQL**:
+   - Use managed PostgreSQL (AWS RDS, DigitalOcean, etc.)
+   - Update `DATABASE_URL` with production credentials
+
+2. **Set environment variables**:
+   - Set all variables in your hosting platform
+   - Generate new `NEXTAUTH_SECRET` for production
+   - Update `NEXTAUTH_URL` to your domain
+
+3. **Run migrations**:
+   ```bash
+   npm run db:migrate
+   npm run db:seed  # Only if you want test data
+   ```
+
+4. **Deploy**:
+   - Vercel, Railway, or your preferred platform
+   - Make sure to set all environment variables
+   - Build command: `npm run build`
+   - Start command: `npm start`
 
 ---
 
-## Production Deployment
+## 📚 Next Steps
 
-For production (Vercel, etc.):
+Once everything is running:
 
-1. Use Supabase production instance
-2. Set environment variables in your hosting platform
-3. Run migrations: `npm run db:migrate`
-4. Deploy!
+1. ✅ Create your account
+2. ✅ Pick a contestant from Season 1
+3. ✅ Explore contestant profiles and standings
+4. ✅ Check your profile and currency
+5. 🔜 Wait for betting and episode features!
 
-Supabase free tier includes:
-- 500 MB database
-- 2 GB bandwidth
-- 50,000 monthly active users
-- Unlimited API requests
+---
 
-More than enough for initial launch!
+## 🆘 Still Having Issues?
+
+1. Check the error message carefully
+2. Verify all environment variables are set
+3. Make sure PostgreSQL is running
+4. Try resetting the database: `npm run db:push -- --force-reset`
+5. Check the browser console for JavaScript errors
+6. Open an issue on GitHub with the error details
+
+---
+
+**You're all set!** 🎉
+
+The Compound is now running locally with a self-hosted database and authentication.
