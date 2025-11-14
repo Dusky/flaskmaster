@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -89,7 +89,7 @@ export function Header() {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="text-text-secondary hover:text-text-primary transition-colors"
                   >
-                    {user.username || user.email.split("@")[0]} ▼
+                    {user.name || user.email?.split("@")[0]} ▼
                   </button>
 
                   {showUserMenu && (
