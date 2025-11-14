@@ -19,10 +19,16 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      const { error } = await signIn(email, password);
 
-    if (error) {
-      setError(error);
+      if (error) {
+        setError(error);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Sign in error:", err);
+      setError("Authentication is currently disabled. Please check back later.");
       setLoading(false);
     }
   };

@@ -38,10 +38,16 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, username);
+    try {
+      const { error } = await signUp(email, password, username);
 
-    if (error) {
-      setError(error);
+      if (error) {
+        setError(error);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Sign up error:", err);
+      setError("Authentication is currently disabled. Please check back later.");
       setLoading(false);
     }
   };
