@@ -52,6 +52,12 @@ export function Header() {
               Contestants
             </Link>
             <Link
+              href="/leaderboard"
+              className="text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Leaderboard
+            </Link>
+            <Link
               href="/bets"
               className="text-text-secondary hover:text-text-primary transition-colors"
             >
