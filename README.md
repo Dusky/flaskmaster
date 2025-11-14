@@ -160,12 +160,17 @@ See `prisma/schema.prisma` for the full schema.
 - [x] User profile pages
 - [x] API routes for user data
 
-### Phase 3: Core Game Features
-- [ ] Season management
-- [ ] Contestant selection flow
+### Phase 3: Core Game Features ✅
+- [x] Season management (list, view, active season detection)
+- [x] Contestant selection flow with modals
+- [x] Season standings leaderboard
+- [x] Individual contestant profile pages
+- [x] User pick system (create and track)
+- [x] Currency system foundation
+- [x] Comprehensive stats tracking and display
+- [x] Dynamic home dashboard based on user state
 - [ ] Episode viewing interface
-- [ ] Currency system
-- [ ] Basic stats tracking
+- [ ] Episode generation
 
 ### Phase 4: Betting System
 - [ ] Betting interface
