@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EpisodeNavigation } from "@/components/episodes/EpisodeNavigation";
 import { TaskViewer } from "@/components/episodes/TaskViewer";
+import { BettingCard } from "@/components/betting/BettingCard";
 
 interface Task {
   id: string;
@@ -42,20 +44,32 @@ interface Episode {
   tasks: Task[];
 }
 
+interface Contestant {
+  id: string;
+  name: string;
+  colorIndex: number;
+  trackedStats?: {
+    totalPoints?: number;
+  };
+}
+
 interface Season {
   id: string;
   seasonNumber: number;
   taskmasterName: string;
   assistantName: string;
+  contestants?: Contestant[];
 }
 
 export default function EpisodePage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [season, setSeason] = useState<Season | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentSection, setCurrentSection] = useState<number>(0); // 0=opening, 1=prize, 2-4=tasks, 5=live, 6=results
+  const [userCurrency, setUserCurrency] = useState<number>(0);
 
   useEffect(() => {
     if (params.id && params.episodeNumber) {
@@ -65,7 +79,7 @@ export default function EpisodePage() {
 
   const fetchEpisodeData = async () => {
     try {
-      // Fetch season info
+      // Fetch season info (includes contestants)
       const seasonRes = await fetch(`/api/seasons/${params.id}`);
       const seasonData = await seasonRes.json();
       setSeason(seasonData);
@@ -76,10 +90,28 @@ export default function EpisodePage() {
       );
       const episodeData = await episodeRes.json();
       setEpisode(episodeData);
+
+      // Fetch user currency if logged in
+      if (user) {
+        const currencyRes = await fetch(`/api/user/${user.id}/currency`);
+        const currencyData = await currencyRes.json();
+        setUserCurrency(currencyData.currency || 0);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error("Error fetching episode:", error);
       setLoading(false);
+    }
+  };
+
+  const handleBetPlaced = () => {
+    // Refresh user currency after placing bet
+    if (user) {
+      fetch(`/api/user/${user.id}/currency`)
+        .then((res) => res.json())
+        .then((data) => setUserCurrency(data.currency || 0))
+        .catch(console.error);
     }
   };
 
@@ -187,12 +219,27 @@ export default function EpisodePage() {
             currentSectionData.type === "task" ||
             currentSectionData.type === "live") &&
             currentTask && (
-              <TaskViewer
-                task={currentTask}
-                season={season}
-                episode={episode}
-                isLiveTask={currentSectionData.type === "live"}
-              />
+              <div className="space-y-6">
+                <TaskViewer
+                  task={currentTask}
+                  season={season}
+                  episode={episode}
+                  isLiveTask={currentSectionData.type === "live"}
+                />
+
+                {/* Betting Section - Only show if logged in and episode not completed */}
+                {user && episode.status !== "completed" && season.contestants && (
+                  <BettingCard
+                    episodeId={episode.id}
+                    taskId={currentTask.id}
+                    contestants={season.contestants}
+                    userId={user.id}
+                    userCurrency={userCurrency}
+                    betType="task_winner"
+                    onBetPlaced={handleBetPlaced}
+                  />
+                )}
+              </div>
             )}
 
           {currentSectionData.type === "results" && (
