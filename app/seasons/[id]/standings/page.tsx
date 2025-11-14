@@ -20,11 +20,20 @@ interface Contestant {
   };
 }
 
+interface Episode {
+  id: string;
+  episodeNumber: number;
+  title?: string;
+  status: string;
+  airDate: string;
+}
+
 interface Season {
   id: string;
   seasonNumber: number;
   status: string;
   contestants: Contestant[];
+  episodes?: Episode[];
 }
 
 export default function StandingsPage() {
@@ -106,8 +115,53 @@ export default function StandingsPage() {
           </div>
         </section>
 
+        {/* Episodes */}
+        {season.episodes && season.episodes.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Episodes</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {season.episodes
+                .sort((a, b) => a.episodeNumber - b.episodeNumber)
+                .map((episode) => (
+                  <Link
+                    key={episode.id}
+                    href={`/seasons/${params.id}/episodes/${episode.episodeNumber}`}
+                  >
+                    <Card variant="interactive" className="h-full">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-bold">
+                          Episode {episode.episodeNumber}
+                        </h3>
+                        <Badge
+                          variant={
+                            episode.status === "live"
+                              ? "live"
+                              : episode.status === "completed"
+                              ? "completed"
+                              : "upcoming"
+                          }
+                        >
+                          {episode.status}
+                        </Badge>
+                      </div>
+                      {episode.title && (
+                        <p className="text-text-primary mb-2 italic">
+                          &quot;{episode.title}&quot;
+                        </p>
+                      )}
+                      <p className="text-text-secondary text-sm">
+                        {new Date(episode.airDate).toLocaleDateString()}
+                      </p>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        )}
+
         {/* Standings Table */}
         <section>
+          <h2 className="text-2xl font-bold mb-4">Season Standings</h2>
           <Card noPadding>
             <div className="divide-y divide-white/10">
               {sortedContestants.map((contestant, index) => {
