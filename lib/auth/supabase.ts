@@ -1,11 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Use placeholder values for local development if not configured
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://xxxxxxxxxxxxxxxxxxxxx.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MDAsImV4cCI6MTk2MDc2ODgwMH0.placeholder";
+// Check if we have real Supabase credentials (not placeholder values)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const hasRealSupabaseConfig = supabaseUrl &&
+  supabaseAnonKey &&
+  !supabaseUrl.includes("your-supabase-url") &&
+  supabaseUrl.startsWith("https://");
 
 // Only create Supabase client if we have real credentials
-export const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL
+export const supabase = hasRealSupabaseConfig
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null as any; // Fallback for local dev without Supabase
 
