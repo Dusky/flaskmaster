@@ -1,30 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-const createUserSchema = z.object({
-  id: z.string(),
+const registerSchema = z.object({
   email: z.string().email(),
   username: z.string().min(3).max(30),
+  password: z.string().min(6),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, email, username } = createUserSchema.parse(body);
+    const { email, username, password } = registerSchema.parse(body);
 
-    // Create user in our database
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "Email or username already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user
     const user = await prisma.user.create({
       data: {
-        id,
         email,
         username,
-        passwordHash: "", // Not used since Supabase handles auth
+        passwordHash,
         currencyBalance: 1000, // Starting balance
       },
     });
 
-    return NextResponse.json({ user }, { status: 201 });
+    return NextResponse.json(
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

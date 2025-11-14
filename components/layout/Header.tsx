@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useSession, signOut } from "next-auth/react";
 
 export function Header() {
-  const { user, signOut } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [userCurrency, setUserCurrency] = useState<number | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -23,7 +24,7 @@ export function Header() {
 
   const handleSignOut = async () => {
     setShowUserMenu(false);
-    await signOut();
+    await signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -83,7 +84,7 @@ export function Header() {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="text-text-secondary hover:text-text-primary transition-colors"
                   >
-                    {user.username || user.email.split("@")[0]} ▼
+                    {user.username || user.name || user.email?.split("@")[0]} ▼
                   </button>
 
                   {showUserMenu && (

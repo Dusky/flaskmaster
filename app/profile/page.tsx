@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/Card";
 import { StatDisplay } from "@/components/ui/StatDisplay";
 import { Badge } from "@/components/ui/Badge";
@@ -18,7 +18,9 @@ interface UserStats {
 }
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const authLoading = status === "loading";
   const router = useRouter();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthProvider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function RegisterPage() {
-  const { signUp, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -38,21 +39,41 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, username);
+    try {
+      // Register the user
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, username, password }),
+      });
 
-    if (error) {
-      setError(error);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to create account");
+        setLoading(false);
+        return;
+      }
+
+      // Auto-sign in after registration
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Account created but failed to sign in. Please try logging in.");
+        setLoading(false);
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (error) {
+      setError("An unexpected error occurred");
       setLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-text-secondary">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">

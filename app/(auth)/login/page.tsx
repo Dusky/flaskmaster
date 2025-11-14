@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthProvider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
-  const { signIn, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,21 +20,25 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (error) {
-      setError(error);
+      if (result?.error) {
+        setError("Invalid email or password");
+        setLoading(false);
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (error) {
+      setError("An unexpected error occurred");
       setLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-text-secondary">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -92,12 +97,6 @@ export default function LoginPage() {
             </p>
           </div>
         </Card>
-
-        <div className="mt-6 text-center">
-          <p className="text-text-secondary text-xs">
-            Demo: Use any email/password or create a new account
-          </p>
-        </div>
       </div>
     </div>
   );

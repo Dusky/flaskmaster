@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -18,7 +18,9 @@ interface Season {
 
 export default function SeasonsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const authLoading = status === "loading";
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPicks, setUserPicks] = useState<Record<string, string>>({});
