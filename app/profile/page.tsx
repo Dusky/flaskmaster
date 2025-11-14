@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 import { Card } from "@/components/ui/Card";
 import { StatDisplay } from "@/components/ui/StatDisplay";
 import { Badge } from "@/components/ui/Badge";

@@ -27,9 +27,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-space-grotesk)", "Inter", "system-ui", "sans-serif"],
-        body: ["var(--font-ibm-plex-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-jetbrains-mono)", "Courier New", "monospace"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        body: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["Consolas", "Monaco", "Courier New", "monospace"],
       },
       boxShadow: {
         card: "0 4px 6px rgba(0,0,0,0.1)",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { StatDisplay } from "@/components/ui/StatDisplay";
@@ -23,11 +23,20 @@ interface UserPick {
   };
 }
 
+interface Episode {
+  id: string;
+  episodeNumber: number;
+  title?: string;
+  status: string;
+  airDate: string;
+}
+
 interface Season {
   id: string;
   seasonNumber: number;
   status: string;
   contestants: any[];
+  episodes?: Episode[];
 }
 
 export default function HomePage() {
@@ -46,16 +55,24 @@ export default function HomePage() {
       // Fetch active season
       const seasonsRes = await fetch("/api/seasons");
       const seasons = await seasonsRes.json();
-      const active = seasons.find((s: Season) => s.status === "active");
-      setActiveSeason(active || null);
+      const activeBasic = seasons.find((s: Season) => s.status === "active");
 
-      // Fetch user's pick if logged in
-      if (user && active) {
-        const picksRes = await fetch(`/api/picks?userId=${user.id}&seasonId=${active.id}`);
-        const picks = await picksRes.json();
-        if (picks.length > 0) {
-          setUserPick(picks[0]);
+      // Fetch full season details with episodes if we have an active season
+      if (activeBasic) {
+        const seasonDetailRes = await fetch(`/api/seasons/${activeBasic.id}`);
+        const seasonDetail = await seasonDetailRes.json();
+        setActiveSeason(seasonDetail);
+
+        // Fetch user's pick if logged in
+        if (user) {
+          const picksRes = await fetch(`/api/picks?userId=${user.id}&seasonId=${seasonDetail.id}`);
+          const picks = await picksRes.json();
+          if (picks.length > 0) {
+            setUserPick(picks[0]);
+          }
         }
+      } else {
+        setActiveSeason(null);
       }
 
       setLoading(false);
@@ -289,6 +306,59 @@ export default function HomePage() {
             </div>
           </Card>
         </section>
+
+        {/* Episodes */}
+        {activeSeason.episodes && activeSeason.episodes.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Episodes</h2>
+              <Link
+                href={`/seasons/${activeSeason.id}/standings`}
+                className="text-gold hover:text-[#f7b77e] transition-colors"
+              >
+                View All →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {activeSeason.episodes
+                .sort((a, b) => b.episodeNumber - a.episodeNumber) // Most recent first
+                .slice(0, 3) // Show only latest 3
+                .map((episode) => (
+                  <Link
+                    key={episode.id}
+                    href={`/seasons/${activeSeason.id}/episodes/${episode.episodeNumber}`}
+                  >
+                    <Card variant="interactive" className="h-full">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-bold">
+                          Episode {episode.episodeNumber}
+                        </h3>
+                        <Badge
+                          variant={
+                            episode.status === "live"
+                              ? "live"
+                              : episode.status === "completed"
+                              ? "completed"
+                              : "upcoming"
+                          }
+                        >
+                          {episode.status}
+                        </Badge>
+                      </div>
+                      {episode.title && (
+                        <p className="text-text-primary mb-2 italic">
+                          &quot;{episode.title}&quot;
+                        </p>
+                      )}
+                      <p className="text-text-secondary text-sm">
+                        {new Date(episode.airDate).toLocaleDateString()}
+                      </p>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        )}
 
         {/* Quick Stats */}
         <section>

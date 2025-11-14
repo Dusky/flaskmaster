@@ -5,18 +5,26 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
   fullWidth?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
 export function Button({
   children,
   variant = "primary",
   fullWidth = false,
+  size = "md",
   className,
   disabled,
   ...props
 }: ButtonProps) {
+  const sizeStyles = {
+    sm: "px-4 py-2 text-sm",
+    md: "px-6 py-3 text-base",
+    lg: "px-8 py-4 text-lg",
+  };
+
   const baseStyles =
-    "px-6 py-3 rounded-lg font-sans font-bold text-base transition-all duration-200 ease-in-out";
+    "rounded-lg font-sans font-bold transition-all duration-200 ease-in-out";
 
   const variantStyles = {
     primary:
@@ -34,6 +42,7 @@ export function Button({
     <button
       className={cn(
         baseStyles,
+        sizeStyles[size],
         variantStyles[variant],
         disabledStyles,
         fullWidth && "w-full",

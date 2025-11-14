@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -38,10 +38,16 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, username);
+    try {
+      const { error } = await signUp(email, password, username);
 
-    if (error) {
-      setError(error);
+      if (error) {
+        setError(error);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Sign up error:", err);
+      setError("Authentication is currently disabled. Please check back later.");
       setLoading(false);
     }
   };

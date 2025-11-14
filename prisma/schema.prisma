@@ -25,6 +25,7 @@ model User {
   // Relations
   picks         UserPick[]
   bets          Bet[]
+  currencyTransactions CurrencyTransaction[]
 
   @@map("users")
 }
@@ -87,6 +88,7 @@ model Episode {
   title           String?
   status          String   @default("upcoming") // upcoming, live, completed
   airDate         DateTime @map("air_date")
+  rewardsProcessed Boolean @default(false) @map("rewards_processed") // Track if currency has been awarded
 
   // Generated content stored as JSON
   content         Json?    // {opening: "...", prizeTask: {...}, tasks: [...], liveTask: {...}, results: {...}}
@@ -97,6 +99,7 @@ model Episode {
   season          Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   tasks           Task[]
   bets            Bet[]
+  currencyTransactions CurrencyTransaction[]
 
   @@unique([seasonId, episodeNumber])
   @@map("episodes")
@@ -222,4 +225,28 @@ model StatDefinition {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("stat_definitions")
+}
+
+// ============================================
+// CURRENCY SYSTEM
+// ============================================
+
+model CurrencyTransaction {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  amount          Int      // Positive for gains, negative for spending
+  type            String   // episode_reward, bet_win, bet_loss, contestant_switch, etc.
+  description     String   @db.Text
+
+  // Optional references
+  episodeId       String?  @map("episode_id")
+  contestantId    String?  @map("contestant_id")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode         Episode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+
+  @@map("currency_transactions")
 }

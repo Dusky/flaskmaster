@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/modals/Modal";
+import { SwitchContestantModal } from "@/components/modals/SwitchContestantModal";
 
 interface Contestant {
   id: string;
@@ -38,8 +39,11 @@ export default function SeasonPage() {
   const [selectedContestant, setSelectedContestant] = useState<Contestant | null>(null);
   const [showBackstory, setShowBackstory] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [picking, setPicking] = useState(false);
   const [userPick, setUserPick] = useState<string | null>(null);
+  const [userPickData, setUserPickData] = useState<Contestant | null>(null);
+  const [userCurrency, setUserCurrency] = useState<number>(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,7 +78,13 @@ export default function SeasonPage() {
       const picks = await res.json();
       if (picks.length > 0) {
         setUserPick(picks[0].contestantId);
+        setUserPickData(picks[0].contestant);
       }
+
+      // Fetch user currency
+      const currencyRes = await fetch(`/api/user/${user.id}/currency`);
+      const currencyData = await currencyRes.json();
+      setUserCurrency(currencyData.currency || 0);
     } catch (error) {
       console.error("Error checking pick:", error);
     }
@@ -88,6 +98,17 @@ export default function SeasonPage() {
   const handleViewBackstory = (contestant: Contestant) => {
     setSelectedContestant(contestant);
     setShowBackstory(true);
+  };
+
+  const handleSwitchClick = (contestant: Contestant) => {
+    setSelectedContestant(contestant);
+    setShowSwitchModal(true);
+  };
+
+  const handleSwitchSuccess = () => {
+    // Refresh data after successful switch
+    fetchSeason();
+    checkUserPick();
   };
 
   const confirmPick = async () => {
@@ -213,6 +234,14 @@ export default function SeasonPage() {
                       <div className="text-center py-2">
                         <Badge variant="live">✓ Your Pick</Badge>
                       </div>
+                    ) : season.status === "active" ? (
+                      <Button
+                        fullWidth
+                        variant="secondary"
+                        onClick={() => handleSwitchClick(contestant)}
+                      >
+                        Switch to This (100 ⚡)
+                      </Button>
                     ) : (
                       <Button fullWidth disabled>
                         Not Selected
@@ -338,6 +367,28 @@ export default function SeasonPage() {
           </div>
         )}
       </Modal>
+
+      {/* Switch Contestant Modal */}
+      {selectedContestant && userPickData && user && (
+        <SwitchContestantModal
+          isOpen={showSwitchModal}
+          onClose={() => setShowSwitchModal(false)}
+          currentContestant={{
+            id: userPickData.id,
+            name: userPickData.name,
+            colorIndex: userPickData.colorIndex,
+          }}
+          newContestant={{
+            id: selectedContestant.id,
+            name: selectedContestant.name,
+            colorIndex: selectedContestant.colorIndex,
+          }}
+          seasonId={season!.id}
+          userId={user.id}
+          userCurrency={userCurrency}
+          onSuccess={handleSwitchSuccess}
+        />
+      )}
     </div>
   );
 }
