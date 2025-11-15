@@ -156,11 +156,15 @@ export default function EpisodePage() {
   const sections = [
     { id: 0, label: "Opening", type: "opening" },
     { id: 1, label: "Prize Task", type: "prize", taskNumber: 0 },
-    { id: 2, label: "Task 1", type: "task", taskNumber: 1 },
-    { id: 3, label: "Task 2", type: "task", taskNumber: 2 },
-    { id: 4, label: "Task 3", type: "task", taskNumber: 3 },
-    { id: 5, label: "Live Task", type: "live", taskNumber: 4 },
-    { id: 6, label: "Results", type: "results" },
+    { id: 2, label: "Banter", type: "banter", banterKey: "banterAfterPrize" },
+    { id: 3, label: "Task 1", type: "task", taskNumber: 1 },
+    { id: 4, label: "Banter", type: "banter", banterKey: "banterAfterTask1" },
+    { id: 5, label: "Task 2", type: "task", taskNumber: 2 },
+    { id: 6, label: "Banter", type: "banter", banterKey: "banterAfterTask2" },
+    { id: 7, label: "Task 3", type: "task", taskNumber: 3 },
+    { id: 8, label: "Banter", type: "banter", banterKey: "banterAfterTask3" },
+    { id: 9, label: "Live Task", type: "live", taskNumber: 4 },
+    { id: 10, label: "Results", type: "results" },
   ];
 
   const currentSectionData = sections[currentSection];
@@ -219,10 +223,30 @@ export default function EpisodePage() {
               <h2 className="text-2xl font-bold mb-4">Opening</h2>
               <div className="prose prose-invert max-w-none">
                 {episode.content?.opening ? (
-                  <p className="text-lg leading-relaxed">{episode.content.opening}</p>
+                  <p className="text-lg leading-relaxed font-body">{episode.content.opening}</p>
                 ) : (
                   <p className="text-text-secondary italic">
                     {season.taskmasterName} welcomes the contestants to Episode {episode.episodeNumber}.
+                  </p>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {currentSectionData.type === "banter" && (
+            <Card>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">💬</span>
+                <h2 className="text-2xl font-bold">Banter Interlude</h2>
+              </div>
+              <div className="prose prose-invert max-w-none">
+                {episode.content?.[currentSectionData.banterKey] ? (
+                  <p className="text-lg leading-relaxed font-body">
+                    {episode.content[currentSectionData.banterKey]}
+                  </p>
+                ) : (
+                  <p className="text-text-secondary italic">
+                    {season.taskmasterName} and {season.assistantName} discuss the results...
                   </p>
                 )}
               </div>
@@ -257,45 +281,102 @@ export default function EpisodePage() {
             )}
 
           {currentSectionData.type === "results" && (
-            <Card>
-              <h2 className="text-2xl font-bold mb-4">Episode Results</h2>
-              <div className="space-y-4">
-                {episode.tasks
-                  .flatMap((task) => task.results)
-                  .reduce((acc: any, result) => {
-                    const existing = acc.find((r: any) => r.contestantId === result.contestantId);
-                    if (existing) {
-                      existing.totalScore += result.score;
-                    } else {
-                      acc.push({
-                        contestantId: result.contestantId,
-                        contestantName: result.contestantName,
-                        contestantColor: result.contestantColor,
-                        totalScore: result.score,
-                      });
-                    }
-                    return acc;
-                  }, [])
-                  .sort((a: any, b: any) => b.totalScore - a.totalScore)
-                  .map((contestant: any, index: number) => {
-                    const medals = ["🥇", "🥈", "🥉"];
-                    return (
-                      <div
-                        key={contestant.contestantId}
-                        className="flex items-center justify-between p-4 rounded-lg bg-surface/50 border border-white/10"
-                      >
-                        <div className="flex items-center gap-4">
-                          <span className="text-2xl">{medals[index] || `${index + 1}th`}</span>
-                          <span className="font-bold text-lg">{contestant.contestantName}</span>
+            <div className="space-y-6">
+              {/* Episode Scoring */}
+              <Card>
+                <h2 className="text-2xl font-bold mb-4">Episode {episode.episodeNumber} Results</h2>
+                <div className="space-y-3">
+                  {episode.tasks
+                    .flatMap((task) => task.results)
+                    .reduce((acc: any, result) => {
+                      const existing = acc.find((r: any) => r.contestantId === result.contestantId);
+                      if (existing) {
+                        existing.totalScore += result.score;
+                      } else {
+                        acc.push({
+                          contestantId: result.contestantId,
+                          contestantName: result.contestantName,
+                          contestantColor: result.contestantColor,
+                          totalScore: result.score,
+                        });
+                      }
+                      return acc;
+                    }, [])
+                    .sort((a: any, b: any) => b.totalScore - a.totalScore)
+                    .map((contestant: any, index: number) => {
+                      const medals = ["🥇", "🥈", "🥉"];
+                      const isWinner = episode.content?.episodeWinner === contestant.contestantId;
+                      return (
+                        <div
+                          key={contestant.contestantId}
+                          className={`flex items-center justify-between p-4 rounded-lg ${
+                            isWinner
+                              ? "bg-gold/20 border-2 border-gold"
+                              : "bg-surface/50 border border-white/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <span className="text-2xl w-12">
+                              {medals[index] || `${index + 1}th`}
+                            </span>
+                            <span className={`font-bold text-lg ${isWinner ? "text-gold" : ""}`}>
+                              {contestant.contestantName}
+                            </span>
+                            {isWinner && (
+                              <Badge variant="default" className="bg-gold text-background">
+                                Episode Winner
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="font-mono text-2xl font-bold text-gold">
+                            {contestant.totalScore} points
+                          </span>
                         </div>
-                        <span className="font-mono text-2xl font-bold text-gold">
-                          {contestant.totalScore} points
+                      );
+                    })}
+                </div>
+              </Card>
+
+              {/* Closing Banter */}
+              {episode.content?.closingBanter && (
+                <Card>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl">🎬</span>
+                    <h2 className="text-2xl font-bold">Episode Wrap-Up</h2>
+                  </div>
+                  <div className="prose prose-invert max-w-none">
+                    <p className="text-lg leading-relaxed font-body">
+                      {episode.content.closingBanter}
+                    </p>
+                  </div>
+                </Card>
+              )}
+
+              {/* Series Standings */}
+              {episode.content?.finalStandings && (
+                <Card>
+                  <h2 className="text-2xl font-bold mb-4">Series Standings After Episode {episode.episodeNumber}</h2>
+                  <div className="space-y-2">
+                    {episode.content.finalStandings.map((standing: any, index: number) => (
+                      <div
+                        key={standing.contestantId}
+                        className="flex items-center justify-between p-3 rounded-lg bg-surface/50 border border-white/10"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-text-secondary w-8">
+                            {index + 1}.
+                          </span>
+                          <span className="font-medium">{standing.name}</span>
+                        </div>
+                        <span className="font-mono text-xl font-bold text-gold">
+                          {standing.totalPoints} points
                         </span>
                       </div>
-                    );
-                  })}
-              </div>
-            </Card>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
           )}
         </section>
 
