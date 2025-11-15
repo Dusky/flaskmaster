@@ -148,6 +148,11 @@ async function main() {
     },
   ];
 
+  // Delete existing contestants for this season to allow re-seeding
+  await prisma.contestant.deleteMany({
+    where: { seasonId: season.id },
+  });
+
   for (const contestantData of contestantsData) {
     const contestant = await prisma.contestant.create({
       data: {
@@ -193,8 +198,10 @@ async function main() {
   ];
 
   for (const statDef of statDefinitions) {
-    await prisma.statDefinition.create({
-      data: statDef,
+    await prisma.statDefinition.upsert({
+      where: { statName: statDef.statName },
+      update: {},
+      create: statDef,
     });
   }
 
@@ -204,6 +211,11 @@ async function main() {
   const contestants = await prisma.contestant.findMany({
     where: { seasonId: season.id },
     orderBy: { colorIndex: "asc" },
+  });
+
+  // Delete existing episodes for this season to allow re-seeding
+  await prisma.episode.deleteMany({
+    where: { seasonId: season.id },
   });
 
   // Create Episode 1
